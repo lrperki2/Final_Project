@@ -6,13 +6,15 @@
 The following packages are needed for this app:
 
   + `shiny`
+  + `shinydashboard`
   + `tidyverse`
+  + `DT`
   + `caret`
 
 To install the packages, run the below code chunk:
 
 ```{r}
-install.packages(c("shiny", "tidyverse", "caret"))
+install.packages(c("shiny", "shinydashboard", "tidyverse", "DT", "caret"))
 ```
 
 ## Running the app
