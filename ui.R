@@ -11,11 +11,19 @@ library(tidyverse)
 library(DT)
 library(caret)
 
-# Define UI for application that draws a histogram
+# Read in raw data; add type variable based on data source
+white <- read_delim("winequality-white.csv", delim = ";") %>%
+  mutate(type = 0)
+red <- read_delim("winequality-red.csv", delim = ";") %>%
+  mutate(type = 1)
+wine <- bind_rows(white, red)
+wine$type <- factor(wine$type, labels = c("white", "red"))
+
+# Define UI for app
 dashboardPage(skin = "red",
               
               # Define header
-              dashboardHeader(title = "Exploring Portugese Vinho Verde wine", titleWidth = 1000),
+              dashboardHeader(title = "Exploring Portugese Vinho Verde Wine", titleWidth = 1000),
               
               #Define sidebar items
               dashboardSidebar(sidebarMenu(
@@ -37,7 +45,36 @@ dashboardPage(skin = "red",
                   # Define data tab
                   tabItem(tabName = "data",
                           fluidRow(
-                            h1("PLACEHOLDER2")
+                            column(width = 3,
+                                   box(width = 12, 
+                                       background ="red",
+                                       # Widget to select input vars for table
+                                       selectizeInput(inputId = "varselect",
+                                                      label = "Select variables to view",
+                                                      choices = names(wine),
+                                                      multiple = TRUE,
+                                                      selected = names(wine))
+                                       ),
+                                     # Widget to filter min values
+                                     fluidRow(
+                                       column(width = 12, 
+                                              box(width = 6,
+                                                  background ="red",
+                                                  uiOutput("filter_min")
+                                                  ),
+                                              
+                                              # Widget to filter max values
+                                              box(width = 6,
+                                                  background ="red",
+                                                  uiOutput("filter_max")
+                                                  )
+                                              )
+                                       )
+                                   ),
+                            # Output table
+                            column(width = 9,
+                                   dataTableOutput("table"),
+                                   )
                             )
                           ),
                   
