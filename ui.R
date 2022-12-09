@@ -11,12 +11,19 @@ library(tidyverse)
 library(DT)
 library(caret)
 
-# Read in raw data; add type variable based on data source
+# Read in raw data
 white <- read_delim("winequality-white.csv", delim = ";") %>%
   mutate(type = 0)
 red <- read_delim("winequality-red.csv", delim = ";") %>%
   mutate(type = 1)
-wine <- bind_rows(white, red)
+# Combine data sets and rename columns; add type variable based on data source
+wine <- bind_rows(white, red) %>%
+  rename("fixed_acidity" = "fixed acidity",
+         "volatile_acidity" = "volatile acidity",
+         "citric_acid" = "citric acid",
+         "residual_sugar" = "residual sugar",
+         "free_sulfur_dioxide" = "free sulfur dioxide",
+         "total_sulfur_dioxide" = "total sulfur dioxide")
 wine$type <- factor(wine$type, labels = c("white", "red"))
 
 # Define UI for app
@@ -49,31 +56,54 @@ dashboardPage(skin = "red",
                                    box(width = 12, 
                                        background ="red",
                                        # Widget to select input vars for table
-                                       selectizeInput(inputId = "varselect",
-                                                      label = "Select variables to view",
+                                       selectizeInput(inputId = "var_select",
+                                                      label = "Select Variables",
                                                       choices = names(wine),
                                                       multiple = TRUE,
                                                       selected = names(wine))
                                        ),
+                                   # Row for subsetting based on wine type
+                                   fluidRow(
+                                     box(width = 12,
+                                         background = "red",
+                                         checkboxGroupInput(inputId = "type_box",
+                                                            label = "Wine Type",
+                                                            choices = c("white", "red"),
+                                                            selected = c("white", "red"),
+                                                            inline = TRUE)
+                                     )
+                                   ),
+                                   # Row for value range header
+                                   fluidRow(
+                                     column(width = 6, 
+                                            background = "red",
+                                            h4("Set Value Ranges")
+                                            ),
+                                     # UI download button
+                                     column(width = 6,
+                                            downloadButton("downloadData", "Download")
+                                            ),
+                                     # Line break
+                                     br(),
+                                   ),
                                      # Widget to filter min values
-                                     fluidRow(
-                                       column(width = 12, 
-                                              box(width = 6,
-                                                  background ="red",
-                                                  uiOutput("filter_min")
-                                                  ),
+                                   fluidRow(
+                                     box(width = 12,
+                                         background = "red",
+                                         column(width = 6,
+                                                uiOutput("filter_min")
+                                                ),
                                               
-                                              # Widget to filter max values
-                                              box(width = 6,
-                                                  background ="red",
-                                                  uiOutput("filter_max")
-                                                  )
-                                              )
-                                       )
+                                            # Widget to filter max values
+                                          column(width = 6,
+                                                 uiOutput("filter_max")
+                                                 )
+                                         )
+                                     )
                                    ),
                             # Output table
                             column(width = 9,
-                                   dataTableOutput("table"),
+                                   dataTableOutput("table")
                                    )
                             )
                           ),
