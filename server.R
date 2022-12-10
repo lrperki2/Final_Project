@@ -8,7 +8,9 @@
 library(shiny)
 library(shinydashboard)
 library(tidyverse)
+library(DT)
 library(caret)
+library(plotly)
 
 # Read in raw data
 white <- read_delim("winequality-white.csv", delim = ";") %>%
@@ -33,7 +35,7 @@ shinyServer(function(input, output, session) {
   
   # Subset data based on user inputs
   data_input <- reactive({
-    wine <- wine %>%
+    wine_data <- wine %>%
       # Filter based on min range of input values
       filter((fixed_acidity >= input$fixed_acidity_min) &
              (volatile_acidity >= input$volatile_acidity_min) &
@@ -72,7 +74,7 @@ shinyServer(function(input, output, session) {
     datatable(data_input(), options = list(scrollX = TRUE, scrollY = 400))
   })
   
-  # Set min input value for numeric variables
+  # Set min input value for each numeric variable
   output$filter_min <- renderUI({
     lapply(numvars, function(var){
       numericInput(
@@ -84,7 +86,7 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  # Set max input value for numeric variables
+  # Set max input value for each numeric variable
   output$filter_max <- renderUI({
     lapply(numvars, function(var){
       numericInput(
@@ -106,21 +108,50 @@ shinyServer(function(input, output, session) {
     }
   )
   
-  # Create plots
-  output$wine_plot <- renderPlot({
-    
-    # Base plotting object
-    g <- ggplot(wine, aes_string(x = input$x_var))
-    
-    # Conditionally use scatter plot or histogram
-    # ADD COLOR MAPPING TO BOTH PLOTS, TITLE/LABELS, ADD PLOTLY
+  # Subset summary data based on user input
+  data_sum <- reactive({
+    wine_sum <- wine %>%
+      # Filter based on type of wine selected
+      filter(type %in% input$type_sum)
+    })
+  
+  # Render plots
+  output$wine_plot <- renderPlotly({
+    # Conditionally add scatter plot
     if(input$plot_rad == "Scatter Plot"){
-      g + geom_point(aes_string(y = input$y_var), color = wine$type) +
-        geom_smooth(aes_string(y = input$y_var), method = "lm")
+      # Base plotting object mapping x, y, and color to user inputs
+      g <- ggplot(data_sum(), aes_string(x = input$x_var, 
+                                         y = input$y_var,
+                                         col = data_sum()$type))
+      # Add scatter plot layer and regression lines
+      g <- g + geom_point() +
+        geom_smooth(method = "lm") +
+        # Overwrite default colors and label
+        scale_colour_manual(name = "type", 
+                            values = c("white" = "gold", "red" = "maroon")) +
+        # Add title based on input variables
+        labs(title = paste0("Scatter plot of ", input$y_var, 
+                            " by ", input$x_var))
+      # Convert ggplot object to plotly object
+      ggplotly(g)
+      
+        # Conditionally add histogram
     } else if(input$plot_rad == "Histogram"){
-      g + geom_histogram()
+      # Base plotting object mapping x and fills to user inputs
+      g <- ggplot(data_sum(), aes_string(x = input$x_var, 
+                                         fill = data_sum()$type))
+      # Add histogram layer
+      g <- g + geom_histogram(color = "black", 
+                              alpha = 0.7, 
+                              position = "identity") + 
+        # Overwrite default fills and label
+        scale_fill_manual(name = "type",
+                          values = c("white" = "gold", "red" = "maroon")) +
+        # Add title based on input variable
+        labs(title = paste0("Histogram of ", input$x_var))
+      # Convert ggplot object to plotly object
+      ggplotly(g)
     } else {}
-    
   })
   
   

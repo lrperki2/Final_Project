@@ -170,11 +170,12 @@ dashboardPage(skin = "red",
                                        )
                             ),
                             
-                            # Plot display and summaries
+                            # Display graphical and numeric summaries
                             # 5 num sum and correlation matrix
                             column(width = 9,
-                                   h4("PLACEHOLDER"),
-                                   plotOutput("wine_plot")
+                                   h4("Graphical Summaries"),
+                                   plotlyOutput("wine_plot"),
+                                   h4("Numeric Summaries")
                                    )
                             )
                           ),

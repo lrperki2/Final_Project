@@ -9,12 +9,13 @@ The following packages are needed for this app:
   + `shinydashboard`
   + `tidyverse`
   + `DT`
+  + `plotly`
   + `caret`
 
 To install the packages, run the below code chunk:
 
 ```{r}
-install.packages(c("shiny", "shinydashboard", "tidyverse", "DT", "caret"))
+install.packages(c("shiny", "shinydashboard", "tidyverse", "DT", "plotly", "caret"))
 ```
 
 ## Running the app
