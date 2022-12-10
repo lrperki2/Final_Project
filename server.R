@@ -76,6 +76,7 @@ shinyServer(function(input, output, session) {
   
   # Set min input value for each numeric variable
   output$filter_min <- renderUI({
+    # Apply numericInput function to each var and generate inputs
     lapply(numvars, function(var){
       numericInput(
         inputId = paste0(var, "_min"),
@@ -88,6 +89,7 @@ shinyServer(function(input, output, session) {
   
   # Set max input value for each numeric variable
   output$filter_max <- renderUI({
+    # Apply numericInput function to each var and generate inputs
     lapply(numvars, function(var){
       numericInput(
         inputId = paste0(var, "_max"),
@@ -154,6 +156,30 @@ shinyServer(function(input, output, session) {
     } else {}
   })
   
+  # Output numeric summary title based on summary type
+  output$sum_title <- renderText({
+    if(input$sum_rad == "Five-Number Summary and Mean"){
+      "Five-Number Summary and Mean"
+    } else if(input$sum_rad == "Correlation Matrix"){
+      "Correlation Matrix"
+    } else{}
+  })
+  
+  # Render summary statistics tables based on user input
+  output$sum_tbl <- renderDataTable({
+    # Conditionally output five number summary and mean
+    if(input$sum_rad == "Five-Number Summary and Mean"){
+      # Make list where each element is var's sum stats then pass all lists 
+      # as args to cbind function
+      fmt_sum <- do.call(cbind, lapply(select(data_sum(), -(type)), summary))
+      # Output as table with scroll bars
+      datatable(fmt_sum, options = list(scrollX = TRUE, scrollY = 250))
+      # Conditionally output correlation matrix of numeric variables
+    } else if(input$sum_rad == "Correlation Matrix"){
+      cor_mat <- cor(select(data_sum(), -(type)))
+      datatable(cor_mat, options = list(scrollX = TRUE, scrollY = 400))
+    } else{}
+  })
   
   
 })

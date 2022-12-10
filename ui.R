@@ -10,6 +10,7 @@ library(shinydashboard)
 library(tidyverse)
 library(DT)
 library(caret)
+library(plotly)
 
 # Read in raw data
 white <- read_delim("winequality-white.csv", delim = ";") %>%
@@ -30,7 +31,7 @@ wine$type <- factor(wine$type, labels = c("white", "red"))
 numvars <- names(wine)[!names(wine) == "type"]
 
 # Define UI for app
-dashboardPage(skin = "red",
+dashboardPage(skin = "yellow",
               
               # Define header
               dashboardHeader(title = "Exploring Portugese Vinho Verde Wine", titleWidth = 1000),
@@ -57,7 +58,7 @@ dashboardPage(skin = "red",
                           fluidRow(
                             column(width = 3,
                                    box(width = 12, 
-                                       background ="red",
+                                       background ="yellow",
                                        # Widget to select input vars for table
                                        selectizeInput(inputId = "var_select",
                                                       label = h4("Select Variables"),
@@ -69,7 +70,7 @@ dashboardPage(skin = "red",
                                    # Row for subsetting based on wine type
                                    fluidRow(
                                      box(width = 12,
-                                         background = "red",
+                                         background = "yellow",
                                          checkboxGroupInput(inputId = "type_box",
                                                             label = h4("Wine Type"),
                                                             choices = c("white", "red"),
@@ -81,7 +82,7 @@ dashboardPage(skin = "red",
                                    # Row for value range header
                                    fluidRow(
                                      column(width = 6, 
-                                            background = "red",
+                                            background = "yellow",
                                             h4("Set Value Ranges")
                                             ),
                                      
@@ -96,7 +97,7 @@ dashboardPage(skin = "red",
                                      # Widget to filter min values
                                    fluidRow(
                                      box(width = 12,
-                                         background = "red",
+                                         background = "yellow",
                                          column(width = 6,
                                                 uiOutput("filter_min")
                                                 ),
@@ -121,7 +122,7 @@ dashboardPage(skin = "red",
                           fluidRow(
                             column(width = 3,
                                    box(width = 12, 
-                                       background ="red",
+                                       background ="yellow",
                                        # Widget to select plot type
                                        radioButtons(inputId = "plot_rad",
                                                     label = h4("Plot Type"),
@@ -149,7 +150,7 @@ dashboardPage(skin = "red",
                                    
                                    # Subset summaries based on wine type
                                    box(width = 12,
-                                       background = "red",
+                                       background = "yellow",
                                        checkboxGroupInput(inputId = "type_sum",
                                                           label = h4("Wine Type"),
                                                           choices = c("white", "red"),
@@ -160,7 +161,7 @@ dashboardPage(skin = "red",
                                    
                                    # Widget to select summary type
                                    box(width = 12,
-                                       background = "red",
+                                       background = "yellow",
                                        radioButtons(inputId = "sum_rad",
                                                     label = h4("Summary Type"),
                                                     choices = c("Five-Number Summary and Mean",
@@ -171,11 +172,15 @@ dashboardPage(skin = "red",
                             ),
                             
                             # Display graphical and numeric summaries
-                            # 5 num sum and correlation matrix
                             column(width = 9,
-                                   h4("Graphical Summaries"),
+                                   h3("Graphical Summaries"),
+                                   # Show plots
                                    plotlyOutput("wine_plot"),
-                                   h4("Numeric Summaries")
+                                   h3("Numeric Summaries"),
+                                   # Dynamic title
+                                   h4(textOutput("sum_title")),
+                                   # Show numeric summaries
+                                   dataTableOutput("sum_tbl")
                                    )
                             )
                           ),
