@@ -25,6 +25,9 @@ wine <- bind_rows(white, red) %>%
          "total_sulfur_dioxide" = "total sulfur dioxide")
 wine$type <- factor(wine$type, labels = c("white", "red"))
 
+#Save a vector of numeric variable names
+numvars <- names(wine)[!names(wine) == "type"]
+
 # Define server for app
 shinyServer(function(input, output, session) {
   
@@ -69,9 +72,6 @@ shinyServer(function(input, output, session) {
     datatable(data_input(), options = list(scrollX = TRUE, scrollY = 400))
   })
   
-  #Save a vector of numeric variable names to use in value ranges
-  numvars <- names(wine)[!names(wine) == "type"]
-  
   # Set min input value for numeric variables
   output$filter_min <- renderUI({
     lapply(numvars, function(var){
@@ -105,5 +105,24 @@ shinyServer(function(input, output, session) {
       write.csv(data_input(), file, row.names = FALSE)
     }
   )
+  
+  # Create plots
+  output$wine_plot <- renderPlot({
+    
+    # Base plotting object
+    g <- ggplot(wine, aes_string(x = input$x_var))
+    
+    # Conditionally use scatter plot or histogram
+    # ADD COLOR MAPPING TO BOTH PLOTS, TITLE/LABELS, ADD PLOTLY
+    if(input$plot_rad == "Scatter Plot"){
+      g + geom_point(aes_string(y = input$y_var), color = wine$type) +
+        geom_smooth(aes_string(y = input$y_var), method = "lm")
+    } else if(input$plot_rad == "Histogram"){
+      g + geom_histogram()
+    } else {}
+    
+  })
+  
+  
   
 })

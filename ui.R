@@ -26,6 +26,9 @@ wine <- bind_rows(white, red) %>%
          "total_sulfur_dioxide" = "total sulfur dioxide")
 wine$type <- factor(wine$type, labels = c("white", "red"))
 
+#Save a vector of numeric variable names
+numvars <- names(wine)[!names(wine) == "type"]
+
 # Define UI for app
 dashboardPage(skin = "red",
               
@@ -57,28 +60,31 @@ dashboardPage(skin = "red",
                                        background ="red",
                                        # Widget to select input vars for table
                                        selectizeInput(inputId = "var_select",
-                                                      label = "Select Variables",
+                                                      label = h4("Select Variables"),
                                                       choices = names(wine),
                                                       multiple = TRUE,
                                                       selected = names(wine))
                                        ),
+                                   
                                    # Row for subsetting based on wine type
                                    fluidRow(
                                      box(width = 12,
                                          background = "red",
                                          checkboxGroupInput(inputId = "type_box",
-                                                            label = "Wine Type",
+                                                            label = h4("Wine Type"),
                                                             choices = c("white", "red"),
                                                             selected = c("white", "red"),
                                                             inline = TRUE)
                                      )
                                    ),
+                                   
                                    # Row for value range header
                                    fluidRow(
                                      column(width = 6, 
                                             background = "red",
                                             h4("Set Value Ranges")
                                             ),
+                                     
                                      # UI download button
                                      column(width = 6,
                                             downloadButton("downloadData", "Download")
@@ -86,6 +92,7 @@ dashboardPage(skin = "red",
                                      # Line break
                                      br(),
                                    ),
+                                   
                                      # Widget to filter min values
                                    fluidRow(
                                      box(width = 12,
@@ -101,6 +108,7 @@ dashboardPage(skin = "red",
                                          )
                                      )
                                    ),
+                            
                             # Output table
                             column(width = 9,
                                    dataTableOutput("table")
@@ -111,7 +119,63 @@ dashboardPage(skin = "red",
                   # Define exploration tab
                   tabItem(tabName = "explore",
                           fluidRow(
-                            h1("PLACEHOLDER3")
+                            column(width = 3,
+                                   box(width = 12, 
+                                       background ="red",
+                                       # Widget to select plot type
+                                       radioButtons(inputId = "plot_rad",
+                                                    label = h4("Plot Type"),
+                                                    choices = c("Scatter Plot",
+                                                                "Histogram"),
+                                                    inline = FALSE
+                                                    ),
+                                       
+                                       # Widget to select x var for plot
+                                       selectizeInput(inputId = "x_var",
+                                                      label = h4("X Variable"),
+                                                      choices = numvars,
+                                                      multiple = FALSE
+                                                      ),
+                                       
+                                       # Conditional panel for y var selection
+                                       conditionalPanel(condition = "input.plot_rad == 'Scatter Plot'",
+                                         selectizeInput(inputId = "y_var",
+                                                        label = h4("Y Variable"),
+                                                        choices = numvars,
+                                                        multiple = FALSE
+                                                        )
+                                         )
+                                       ),
+                                   
+                                   # Subset summaries based on wine type
+                                   box(width = 12,
+                                       background = "red",
+                                       checkboxGroupInput(inputId = "type_sum",
+                                                          label = h4("Wine Type"),
+                                                          choices = c("white", "red"),
+                                                          selected = c("white", "red"),
+                                                          inline = TRUE
+                                                          )
+                                       ),
+                                   
+                                   # Widget to select summary type
+                                   box(width = 12,
+                                       background = "red",
+                                       radioButtons(inputId = "sum_rad",
+                                                    label = h4("Summary Type"),
+                                                    choices = c("Five-Number Summary and Mean",
+                                                                "Correlation Matrix"),
+                                                    inline = FALSE
+                                                    )
+                                       )
+                            ),
+                            
+                            # Plot display and summaries
+                            # 5 num sum and correlation matrix
+                            column(width = 9,
+                                   h4("PLACEHOLDER"),
+                                   plotOutput("wine_plot")
+                                   )
                             )
                           ),
                   
