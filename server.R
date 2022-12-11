@@ -11,6 +11,8 @@ library(tidyverse)
 library(DT)
 library(caret)
 library(plotly)
+library(rpart)
+library(randomForest)
 
 # Read in raw data
 white <- read_delim("winequality-white.csv", delim = ";") %>%
@@ -29,6 +31,9 @@ wine$type <- factor(wine$type, labels = c("white", "red"))
 
 #Save a vector of numeric variable names
 numvars <- names(wine)[!names(wine) == "type"]
+
+#Save a vector of variable names other than the response
+predvars <- names(wine)[!names(wine) == "quality"]
 
 # Define server for app
 shinyServer(function(input, output, session) {
@@ -71,7 +76,7 @@ shinyServer(function(input, output, session) {
   
   # Render data table and add scroll bars
   output$table <- renderDataTable({
-    datatable(data_input(), options = list(scrollX = TRUE, scrollY = 400))
+    datatable(data_input(), options = list(scrollX = TRUE, scrollY = 800))
   })
   
   # Set min input value for each numeric variable
@@ -169,7 +174,7 @@ shinyServer(function(input, output, session) {
   output$sum_tbl <- renderDataTable({
     # Conditionally output five number summary and mean
     if(input$sum_rad == "Five-Number Summary and Mean"){
-      # Make list where each element is var's sum stats then pass all lists 
+      # Make list where each element is var's sum stats, then pass all lists 
       # as args to cbind function
       fmt_sum <- do.call(cbind, lapply(select(data_sum(), -(type)), summary))
       # Output as table with scroll bars

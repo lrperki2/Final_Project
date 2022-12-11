@@ -11,6 +11,8 @@ library(tidyverse)
 library(DT)
 library(caret)
 library(plotly)
+library(rpart)
+library(randomForest)
 
 # Read in raw data
 white <- read_delim("winequality-white.csv", delim = ";") %>%
@@ -30,11 +32,14 @@ wine$type <- factor(wine$type, labels = c("white", "red"))
 #Save a vector of numeric variable names
 numvars <- names(wine)[!names(wine) == "type"]
 
+#Save a vector of variable names other than the response
+predvars <- names(wine)[!names(wine) == "quality"]
+
 # Define UI for app
 dashboardPage(skin = "yellow",
               
               # Define header
-              dashboardHeader(title = "Exploring Portugese Vinho Verde Wine", titleWidth = 1000),
+              dashboardHeader(title = "Portugese Vinho Verde Wine Data", titleWidth = 1000),
               
               #Define sidebar items
               dashboardSidebar(sidebarMenu(
@@ -57,14 +62,17 @@ dashboardPage(skin = "yellow",
                   tabItem(tabName = "data",
                           fluidRow(
                             column(width = 3,
-                                   box(width = 12, 
-                                       background ="yellow",
-                                       # Widget to select input vars for table
-                                       selectizeInput(inputId = "var_select",
-                                                      label = h4("Select Variables"),
-                                                      choices = names(wine),
-                                                      multiple = TRUE,
-                                                      selected = names(wine))
+                                   fluidRow(
+                                     box(width = 12, 
+                                         background ="yellow",
+                                         # Widget to select input vars for table
+                                         selectizeInput(inputId = "var_select",
+                                                        label = h4("Select Variables"),
+                                                        choices = names(wine),
+                                                        multiple = TRUE,
+                                                        selected = names(wine)
+                                                        )
+                                         )
                                        ),
                                    
                                    # Row for subsetting based on wine type
@@ -75,7 +83,8 @@ dashboardPage(skin = "yellow",
                                                             label = h4("Wine Type"),
                                                             choices = c("white", "red"),
                                                             selected = c("white", "red"),
-                                                            inline = TRUE)
+                                                            inline = TRUE
+                                                            )
                                      )
                                    ),
                                    
@@ -122,7 +131,7 @@ dashboardPage(skin = "yellow",
                           fluidRow(
                             column(width = 3,
                                    box(width = 12, 
-                                       background ="yellow",
+                                       background = "yellow",
                                        # Widget to select plot type
                                        radioButtons(inputId = "plot_rad",
                                                     label = h4("Plot Type"),
@@ -188,15 +197,143 @@ dashboardPage(skin = "yellow",
                   # Define modeling tab
                   tabItem(tabName = "model",
                           fluidRow(
-                            h1("PLACEHOLDER4"),
                             # Define sub-tabs
                             tabsetPanel(
+                              # Define model info sub-tab
                               tabPanel("Model Info", "PLACEHOLDER5"),
-                              tabPanel("Model Fitting", "PLACEHOLDER6"),
+                              
+                              
+                              #Define model fitting sub-tab
+                              tabPanel("Model Fitting", 
+                                       fluidRow(
+                                         column(width = 3,
+                                                # Linear Regression inputs
+                                                h3("Linear Regression"),
+                                                box(width = 12, 
+                                                    background = "yellow",
+                                                    # Widget for lm variable selection
+                                                    selectizeInput(inputId = "var_lm",
+                                                                   label = h4("Select Variables"),
+                                                                   choices = predvars,
+                                                                   multiple = TRUE,
+                                                                   selected = predvars
+                                                                   ),
+                                                    
+                                                    # Widget for including interaction terms
+                                                    checkboxInput(inputId = "inter_box",
+                                                                 label = h4("Include all interaction terms")
+                                                                 )
+                                                ),
+                                                
+                                                # Regression Tree inputs
+                                                h3("Regression Tree"),
+                                                box(width = 12,
+                                                    background = "yellow",
+                                                    # Widget for tree variable selection
+                                                    selectizeInput(inputId = "var_tree",
+                                                                   label = h4("Select Variables"),
+                                                                   choices = predvars,
+                                                                   multiple = TRUE,
+                                                                   selected = predvars
+                                                                   ),
+                                                    
+                                                    # Sub-column for complexity parameters
+                                                    h4("Complexity Parameters"),
+                                                    column(width = 4,
+                                                           # Widget for min cp parameter
+                                                           numericInput(inputId = "cp_from",
+                                                                        label = "Min",
+                                                                        value = 0,
+                                                                        min = 0,
+                                                                        max = 1,
+                                                                        step = 0.01
+                                                                        )
+                                                           ),
+                                                    
+                                                    # Widget for max cp parameter
+                                                    column(width = 4,
+                                                           numericInput(inputId = "cp_to",
+                                                                        label = "Max",
+                                                                        value = 0.1,
+                                                                        min = 0.01,
+                                                                        max = 1,
+                                                                        step = 0.01
+                                                                        )
+                                                           ),
+                                                    
+                                                    # Widget for cp grid increment
+                                                    column(width = 4,
+                                                           numericInput(inputId = "cp_by",
+                                                                        label = "By interval",
+                                                                        value = 0.001,
+                                                                        min = 0.0001,
+                                                                        max = 1,
+                                                                        step = 0.0001
+                                                                        )
+                                                           )
+                                                    ),
+                                                    
+                                                # Random Forest inputs
+                                                h3("Random Forest"),
+                                                box(width = 12, 
+                                                    background = "yellow",
+                                                    # Widget for rf variable selection
+                                                    selectizeInput(inputId = "var_rf",
+                                                                   label = h4("Select Variables"),
+                                                                   choices = predvars,
+                                                                   multiple = TRUE,
+                                                                   selected = predvars
+                                                                   ),
+                                                    
+                                                    # Widget to set max number of "try" variables
+                                                    numericInput(inputId = "m_try",
+                                                                 label = h4("Max random variables to try"),
+                                                                 value = 5,
+                                                                 min = 1,
+                                                                 max = 5,
+                                                                 step = 1
+                                                                 )
+                                                    ),
+                                                
+                                                # Training parameter inputs
+                                                h3("Training Parameters"),
+                                                box(width = 12,
+                                                    background = "yellow",
+                                                    # Widget for selecting proportion of training data
+                                                    numericInput(inputId = "p_train",
+                                                                 label = h4("Proportion of data in training set"),
+                                                                 value = 0.7,
+                                                                 min = 0.05,
+                                                                 max = 1,
+                                                                 step = 0.05
+                                                                 ),
+                                                    
+                                                    # Widget for selecting number of cross-validation folds
+                                                    numericInput(inputId = "k_folds",
+                                                                 label = h4("Cross-validation folds"),
+                                                                 value = 5,
+                                                                 min = 1,
+                                                                 max = 5,
+                                                                 step = 1
+                                                                 ),
+                                                    
+                                                    # Widget for button to fit all models
+                                                    actionButton(inputId = "fit_button",
+                                                                 label = "Fit All Models",
+                                                                 class = "btn btn-danger btn-lg"
+                                                                 )
+                                                    )
+                                                )
+                                         )
+                                       ),
+                              
+                              # Define predictions tab
                               tabPanel("Model Predictions", "PLACEHOLDER7")
+                              )
                             )
                           )
                   )
                 )
               )
-)
+              
+

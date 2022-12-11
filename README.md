@@ -11,11 +11,13 @@ The following packages are needed for this app:
   + `DT`
   + `plotly`
   + `caret`
+  + `rpart`
+  + `randomForest`
 
 To install the packages, run the below code chunk:
 
 ```{r}
-install.packages(c("shiny", "shinydashboard", "tidyverse", "DT", "plotly", "caret"))
+install.packages(c("shiny", "shinydashboard", "tidyverse", "DT", "plotly", "caret", "rpart", "randomForest"))
 ```
 
 ## Running the app
