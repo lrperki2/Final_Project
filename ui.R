@@ -98,7 +98,9 @@ dashboardPage(skin = "yellow",
                                      
                                      # UI download button
                                      column(width = 6,
-                                            downloadButton("downloadData", "Download")
+                                            downloadButton("downloadData", 
+                                                           "Download", 
+                                                           "btn btn-danger")
                                             ),
                                      # Line break
                                      br(),
@@ -358,8 +360,14 @@ dashboardPage(skin = "yellow",
                                                 
                                                 # Output variable importance for random forest
                                                 h3("Random Forest Variable Importance"),
-                                                plotOutput("rf_imp_plot")
+                                                plotOutput("rf_imp_plot"),
                                                 
+                                                # Output table of fit stats on test data
+                                                h3("Fit Statistics on Test Set"),
+                                                dataTableOutput("fit_test_tbl"),
+                                                
+                                                h3("Conclusion"),
+                                                h4(textOutput("fit_statement"))
                                                 )
                                          )
                                        ),

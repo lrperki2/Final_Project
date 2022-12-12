@@ -294,8 +294,7 @@ shinyServer(function(input, output, session) {
     
     # Render table of training fit stats
     output$train_tbl <- renderDataTable({
-      datatable(trn_stats, options = list(scrollX = TRUE, 
-                                          pageLength = 20))
+      datatable(trn_stats, options = list(scrollX = TRUE, pageLength = 20))
     })
     
     # Create data frame of coefficient summaries and set coefficients column
@@ -319,15 +318,36 @@ shinyServer(function(input, output, session) {
       plot(varImp(rf_fit))
     )
     
-    # PLACEHOLDER -- may need to take out of observe nest
+    # Predict on each model using test set
     preds_lm <- predict(mlr_fit, newdata = dataTest)
-    fitstats_lm <- postResample(preds_lm, obs = dataTest$quality)
-    
     preds_tree <- predict(tree_fit, newdata = dataTest)
-    fitstats_tree <- postResample(preds_tree, obs = dataTest$quality)
-    
     preds_rf <- predict(rf_fit, newdata = dataTest)
-    fitstats_rf <- postResample(preds_rf, obs = dataTest$quality)
+    
+    # Evaluate fit statistics on each model
+    fit_stat_tst_lm <- postResample(preds_lm, obs = dataTest$quality)
+    fit_stat_tst_tree <- postResample(preds_tree, obs = dataTest$quality)
+    fit_stat_tst_rf <- postResample(preds_rf, obs = dataTest$quality)
+    
+    # Create tibble of fit stats on test data by model
+    fit_test <- bind_cols(
+      Model = c("linear", "tree", "random forest"),
+      bind_rows(fit_stat_tst_lm, fit_stat_tst_tree, fit_stat_tst_rf)
+    )
+    
+    # Find best model based on minimum RMSE
+    best_model <- fit_test %>%
+      filter(RMSE == min(RMSE))
+    
+    # Render table of fit stats on test data
+    output$fit_test_tbl <- renderDataTable({
+      datatable(fit_test)
+    })
+    
+    # Render statement of best model based on lowest RMSE
+    output$fit_statement <- renderText({
+      paste("The 'best' model evaluated by lowest RMSE is the ", 
+            best_model[, 1], " model with an RMSE of ", best_model[, 2], ".")
+    })
   })
   
   
