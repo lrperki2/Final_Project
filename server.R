@@ -13,6 +13,7 @@ library(caret)
 library(plotly)
 library(rpart)
 library(randomForest)
+library(rattle)
 
 # Read in raw data
 white <- read_delim("winequality-white.csv", delim = ";") %>%
@@ -76,7 +77,9 @@ shinyServer(function(input, output, session) {
   
   # Render data table and add scroll bars
   output$table <- renderDataTable({
-    datatable(data_input(), options = list(scrollX = TRUE, scrollY = 800))
+    datatable(data_input(), options = list(scrollX = TRUE, 
+                                           scrollY = 800,
+                                           pageLength = 20))
   })
   
   # Set min input value for each numeric variable
@@ -178,12 +181,153 @@ shinyServer(function(input, output, session) {
       # as args to cbind function
       fmt_sum <- do.call(cbind, lapply(select(data_sum(), -(type)), summary))
       # Output as table with scroll bars
-      datatable(fmt_sum, options = list(scrollX = TRUE, scrollY = 250))
+      datatable(fmt_sum, options = list(scrollX = TRUE, 
+                                        scrollY = 250,
+                                        pageLength = 20))
       # Conditionally output correlation matrix of numeric variables
     } else if(input$sum_rad == "Correlation Matrix"){
       cor_mat <- cor(select(data_sum(), -(type)))
-      datatable(cor_mat, options = list(scrollX = TRUE, scrollY = 400))
+      datatable(cor_mat, options = list(scrollX = TRUE, 
+                                        scrollY = 250,
+                                        pageLength = 20))
     } else{}
+  })
+  
+  # Fit models on action button click
+  observeEvent(input$fit_button, {
+    
+    # Create a Progress object
+    progress <- Progress$new()
+    # Make sure it closes when we exit this reactive, even if there's an error
+    on.exit(progress$close())
+    
+    # Set progress bar
+    progress$set(message = "Fitting Models:", value = 0)
+    
+    # Create selected variable vectors from inputs
+    var_lm <- unlist(input$var_lm_inp)
+    var_tree <- unlist(input$var_tree_inp)
+    var_rf <- unlist(input$var_rf_inp)
+    
+    # Create complexity parameter sequence from inputs
+    cp_seq <- seq(from = input$cp_from, to = input$cp_to, by = input$cp_by)
+    
+    # Create mtry parameter sequence from input
+    m_try_seq <- seq(1:input$m_try)
+    
+    # Create preprocess argument for training
+    if(input$preproc_box){
+      preproc <- c("center", "scale")
+    } else {
+      preproc <- NULL
+    }
+    
+    # Set RNG seed for partitioning
+    set.seed(input$rng_inp)
+    
+    # Separate data into train and test sets at input proportion
+    dataIndex <- createDataPartition(wine$quality, p = input$p_train, list = FALSE)
+    dataTrain <- wine[dataIndex, ]
+    dataTest <- wine[-dataIndex, ]
+    
+    # Set training parameters
+    trainControl <- trainControl(method = "cv", number = input$k_folds)
+    
+    # Update progress bar
+    progress$inc(0.2, detail = "Linear")
+    
+    # Reset seed for training linear model
+    set.seed(input$rng_inp)
+    # Fit regression model; conditionally include interaction terms from user input
+    if(input$inter_box){
+      mlr_fit <- train(quality ~ .^2, 
+                       data = dataTrain[ , c("quality", var_lm)],
+                       method = "lm",
+                       preProcess = preproc,
+                       trControl = trainControl
+                       )
+    } else {
+      mlr_fit <- train(quality ~ ., 
+                       data = dataTrain[ , c("quality", var_lm)],
+                       method = "lm",
+                       preProcess = preproc,
+                       trControl = trainControl
+                       )
+    }
+    
+    # Update progress bar
+    progress$inc(0.2, detail = "Tree")
+    
+    # Reset seed for training tree model
+    set.seed(input$rng_inp)
+    # Fit tree model
+    tree_fit <- train(quality ~ ., 
+                      data = dataTrain[ , c("quality", var_tree)],
+                      method = "rpart",
+                      preProcess = preproc,
+                      trControl = trainControl,
+                      tuneGrid = data.frame(cp = cp_seq)
+                      )
+    
+    # Update progress bar
+    progress$inc(0.2, detail = "Random Forest")
+    
+    # Reset seed for training random forest model
+    set.seed(input$rng_inp)
+    # Fit random forest model
+    rf_fit <- train(quality ~ ., 
+                    data = dataTrain[ , c("quality", var_tree)],
+                    method = "rf",
+                    preProcess = preproc,
+                    trControl = trainControl,
+                    tuneGrid = data.frame(mtry = m_try_seq)
+                    )
+    
+    # Get fit stats from tree and rf models
+    tree_trn_stats <- filter(tree_fit$results, cp == tree_fit$bestTune$cp)
+    rf_trn_stats <- filter(rf_fit$results, mtry == rf_fit$bestTune$mtry)
+    
+    # Combine training fit stats into a dataframe
+    trn_stats <- bind_rows(mlr_fit$results, tree_trn_stats, rf_trn_stats) %>%
+      mutate(Model = c("linear", "tree", "random forest")) %>%
+      select(Model, everything())
+    
+    # Render table of training fit stats
+    output$train_tbl <- renderDataTable({
+      datatable(trn_stats, options = list(scrollX = TRUE, 
+                                          pageLength = 20))
+    })
+    
+    # Create data frame of coefficient summaries and set coefficients column
+    mlr_sum_df <- summary(mlr_fit)$coefficients %>%
+      as.data.frame()
+    mlr_sum_df <- bind_cols(Coefficients = rownames(mlr_sum_df), mlr_sum_df)
+    rownames(mlr_sum_df) <- NULL
+    
+    # Render table of linear model coefficients summary
+    output$mlr_sum_tbl <- renderDataTable({
+      datatable(mlr_sum_df, options = list(scrollX = TRUE, pageLength = 20))
+    })
+    
+    # Render tree plot of final model
+    output$tree_plot <- renderPlot(
+      fancyRpartPlot(tree_fit$finalModel)
+    )
+    
+    # Render plot of variable importance for random forest
+    output$rf_imp_plot <- renderPlot(
+      plot(varImp(rf_fit))
+    )
+    
+    # PLACEHOLDER -- may need to take out of observe nest
+    preds_lm <- predict(mlr_fit, newdata = dataTest)
+    fitstats_lm <- postResample(preds_lm, obs = dataTest$quality)
+    
+    preds_tree <- predict(tree_fit, newdata = dataTest)
+    fitstats_tree <- postResample(preds_tree, obs = dataTest$quality)
+    
+    preds_rf <- predict(rf_fit, newdata = dataTest)
+    fitstats_rf <- postResample(preds_rf, obs = dataTest$quality)
   })
   
   

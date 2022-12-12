@@ -13,6 +13,7 @@ library(caret)
 library(plotly)
 library(rpart)
 library(randomForest)
+library(rattle)
 
 # Read in raw data
 white <- read_delim("winequality-white.csv", delim = ";") %>%
@@ -144,6 +145,7 @@ dashboardPage(skin = "yellow",
                                        selectizeInput(inputId = "x_var",
                                                       label = h4("X Variable"),
                                                       choices = numvars,
+                                                      selected = "density",
                                                       multiple = FALSE
                                                       ),
                                        
@@ -152,6 +154,7 @@ dashboardPage(skin = "yellow",
                                          selectizeInput(inputId = "y_var",
                                                         label = h4("Y Variable"),
                                                         choices = numvars,
+                                                        selected = "fixed_acidity",
                                                         multiple = FALSE
                                                         )
                                          )
@@ -175,6 +178,7 @@ dashboardPage(skin = "yellow",
                                                     label = h4("Summary Type"),
                                                     choices = c("Five-Number Summary and Mean",
                                                                 "Correlation Matrix"),
+                                                    selected = "Correlation Matrix",
                                                     inline = FALSE
                                                     )
                                        )
@@ -212,7 +216,7 @@ dashboardPage(skin = "yellow",
                                                 box(width = 12, 
                                                     background = "yellow",
                                                     # Widget for lm variable selection
-                                                    selectizeInput(inputId = "var_lm",
+                                                    selectizeInput(inputId = "var_lm_inp",
                                                                    label = h4("Select Variables"),
                                                                    choices = predvars,
                                                                    multiple = TRUE,
@@ -221,8 +225,8 @@ dashboardPage(skin = "yellow",
                                                     
                                                     # Widget for including interaction terms
                                                     checkboxInput(inputId = "inter_box",
-                                                                 label = h4("Include all interaction terms")
-                                                                 )
+                                                                  label = h4("Include all interaction terms")
+                                                                  )
                                                 ),
                                                 
                                                 # Regression Tree inputs
@@ -230,7 +234,7 @@ dashboardPage(skin = "yellow",
                                                 box(width = 12,
                                                     background = "yellow",
                                                     # Widget for tree variable selection
-                                                    selectizeInput(inputId = "var_tree",
+                                                    selectizeInput(inputId = "var_tree_inp",
                                                                    label = h4("Select Variables"),
                                                                    choices = predvars,
                                                                    multiple = TRUE,
@@ -278,7 +282,7 @@ dashboardPage(skin = "yellow",
                                                 box(width = 12, 
                                                     background = "yellow",
                                                     # Widget for rf variable selection
-                                                    selectizeInput(inputId = "var_rf",
+                                                    selectizeInput(inputId = "var_rf_inp",
                                                                    label = h4("Select Variables"),
                                                                    choices = predvars,
                                                                    multiple = TRUE,
@@ -288,7 +292,7 @@ dashboardPage(skin = "yellow",
                                                     # Widget to set max number of "try" variables
                                                     numericInput(inputId = "m_try",
                                                                  label = h4("Max random variables to try"),
-                                                                 value = 5,
+                                                                 value = 4,
                                                                  min = 1,
                                                                  max = 5,
                                                                  step = 1
@@ -311,18 +315,51 @@ dashboardPage(skin = "yellow",
                                                     # Widget for selecting number of cross-validation folds
                                                     numericInput(inputId = "k_folds",
                                                                  label = h4("Cross-validation folds"),
-                                                                 value = 5,
-                                                                 min = 1,
+                                                                 value = 4,
+                                                                 min = 2,
                                                                  max = 5,
                                                                  step = 1
                                                                  ),
                                                     
-                                                    # Widget for button to fit all models
+                                                    # Widget for centering and scaling data
+                                                    checkboxInput(inputId = "preproc_box",
+                                                                  label = h4("Center and scale data"),
+                                                                  value = TRUE
+                                                                  ),
+                                                    
+                                                    # Widget for setting random seed
+                                                    numericInput(inputId = "rng_inp",
+                                                                 label = h4("Seed"),
+                                                                 value = 0,
+                                                                 step = 1
+                                                                 ),
+                                                    
+                                                    # Widget to fit all models
                                                     actionButton(inputId = "fit_button",
                                                                  label = "Fit All Models",
                                                                  class = "btn btn-danger btn-lg"
-                                                                 )
+                                                                 ),
                                                     )
+                                                ),
+                                         # Body of modeling page
+                                         column(width = 9,
+                                                
+                                                # Output training fit stats
+                                                h3("Training Fit Statistics(Best Tunes)"),
+                                                dataTableOutput("train_tbl"),
+                                                
+                                                # Output coefficient summaries
+                                                h3("Linear Model Coefficients Summary"),
+                                                dataTableOutput("mlr_sum_tbl"),
+                                                
+                                                # Output tree plot
+                                                h3("Tree Plot(Best Tune)"),
+                                                plotOutput("tree_plot"),
+                                                
+                                                # Output variable importance for random forest
+                                                h3("Random Forest Variable Importance"),
+                                                plotOutput("rf_imp_plot")
+                                                
                                                 )
                                          )
                                        ),
