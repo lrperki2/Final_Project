@@ -33,8 +33,8 @@ wine$type <- factor(wine$type, labels = c("white", "red"))
 #Save a vector of numeric variable names
 numvars <- names(wine)[!names(wine) == "type"]
 
-#Save a vector of variable names other than the response
-predvars <- names(wine)[!names(wine) == "quality"]
+#Save a vector of variable names other than the response and categorical variable
+predvars <- names(wine)[!names(wine) %in% c("quality", "type")]
 
 # Define UI for app
 dashboardPage(skin = "yellow",
@@ -50,16 +50,61 @@ dashboardPage(skin = "yellow",
                 menuItem("Modeling", tabName = "model", icon = icon("magnifying-glass-chart"))
               )),
               
-              # Define body and about tab
+              # Define body and 'about' tab
               dashboardBody(
                 tabItems(
                   tabItem(tabName = "about",
                           fluidRow(
-                            h1("PLACEHOLDER1")
+                            # Output image
+                            imageOutput("img"),
+                            
+                            # Purpose section
+                            h3("Purpose"),
+                            "The purpose of this app is to explore data ",
+                            "collected on Portuguese \"Vinho Verde\" wine, ",
+                            "through graphical summaries, numerical summaries, ",
+                            "and predictions.",
+                            
+                            # Data section
+                            h3("Data"),
+                            "The data is sourced from the ",
+                            a(href="https://archive.ics.uci.edu/ml/datasets/Wine+Quality",
+                              "UCI Machine Learning Repository"),
+                            "and contains properties of red and white wine ",
+                            "samples that were measured in physiochemical ",
+                            "tests. The target variable is the ",
+                            "quality of the wines, based on sensory ",
+                            "measurements, on a scale from 0 to 10.",
+                            
+                            # Tabs section
+                            h3("Tabs"),
+                            tags$li("Data: Displays the raw data. Rows can be ",
+                                    "filtered based on wine type or a range ",
+                                    "of values for each numeric attribute. ", 
+                                    "Variables can be selected, as well, and ",
+                                    "the subset data can be exported as a ",
+                                    ".csv file."),
+                            tags$li("Data Exploration: Provides a few ",
+                                    "graphical and numerical summaries. A ",
+                                    "scatter plot, five-number summary, ",
+                                    "histogram, and correlation matrix can be ",
+                                    "viewed and subset based on wine type. ",
+                                    "The graphical summaries can be modified ",
+                                    "to reflect desired variables."),
+                            tags$li("Modeling: Contains three sub-sections:",
+                                    tags$ul("Model Info: Gives some basic ",
+                                            "information about models."),
+                                    tags$ul("Model Fitting: Fits three models ",
+                                            "based on chosen variables and ",
+                                            "parameters."),
+                                    tags$ul("Model Predictions: Makes ",
+                                            "predictions based on the fitted ",
+                                            "models and a set of given inputs.")
+                                    )
                             )
                           ),
                   
-                  # Define data tab
+                  # Define 'data' tab
                   tabItem(tabName = "data",
                           fluidRow(
                             column(width = 3,
@@ -206,8 +251,75 @@ dashboardPage(skin = "yellow",
                             # Define sub-tabs
                             tabsetPanel(
                               # Define model info sub-tab
-                              tabPanel("Model Info", "PLACEHOLDER5"),
-                              
+                              tabPanel("Model Info",
+                                       # Overview
+                                       h3("Purpose"),
+                                       "The goal of the models are to predict ",
+                                       "quality of \"Vinho Verde\" wines ",
+                                       "based on their physiochemical properties",
+                                       " using three different model types:",
+                                       "linear regression, regression trees, ",
+                                       "and random forests.",
+                                       br(),
+                                       
+                                       # Linear Regression explanation
+                                       h3("Linear Regression"),
+                                       "Linear Regression models a response ",
+                                       "by a linear function of the parameters. ",
+                                       "It is given in the form: ",
+                                       "Multiple linear regression is a type of ",
+                                       "linear regression that means the response ",
+                                       "is modeled by multiple explanatory variables. ",
+                                       "The main advantage of linear models is ",
+                                       "they are simple and relatively easy to ",
+                                       "implement; the trade-off is that they are ",
+                                       "also not as flexible as other models ",
+                                       "and are not as likely to yield the best ",
+                                       "predictions.",
+                                       br(),
+                                       
+                                       # Regression Tree explanation
+                                       h3("Regression Trees"),
+                                       "Regression trees are algorithm based ",
+                                       "models that split a predictor space ",
+                                       "into regions and produce different ",
+                                       "predictions for each region. The predictions ",
+                                       "are commonly the mean of observations over ",
+                                       "a given region. The advantage of regression ",
+                                       "trees is that they are highly flexible ",
+                                       "and they can naturally find interaction terms, ",
+                                       "as each split considers all variables and ",
+                                       "can change from one variable to another ",
+                                       "between splits. The drawbacks are that ",
+                                       "trees often need to be 'pruned', i.e., ",
+                                       "they tend to be overfitted, so reducing ",
+                                       "the number of nodes can lead to decreased ",
+                                       "variance, as a trade-off to increased bias.",
+                                       "Another drawback of trees is that they use ",
+                                       "a greedy algorithm, so the best possible ",
+                                       "split is made from each successive split, ",
+                                       "but does not necessarily lead to the best ",
+                                       "combination of splits overall.",
+                                       
+                                       # Random Forests
+                                       h3("Random Forests"),
+                                       "Random forests are an ensemble learning method",
+                                       "that use bootstrap samples, ",
+                                       "which are re-samples taken with as many ",
+                                       "aspects of the original sample replicated ",
+                                       "as possible. The samples are the same size ",
+                                       "as the originals, so observations may be ",
+                                       "duplicated or excluded from any given bootstrap ",
+                                       "sample. For random forests, a random subset of ",
+                                       "variables are used for each tree. This ",
+                                       "prevents a dominant predictor from being ",
+                                       "used too often and prevents the trees",
+                                       "from becoming too correlated. The advantage of this ",
+                                       "is that the variance is reduced. A drawback ",
+                                       "to random forests is that they lose interpretability ",
+                                       "compared to regression trees, but they",
+                                       "tend to yield better predictions."
+                                       ),
                               
                               #Define model fitting sub-tab
                               tabPanel("Model Fitting", 
@@ -355,7 +467,7 @@ dashboardPage(skin = "yellow",
                                                 dataTableOutput("mlr_sum_tbl"),
                                                 
                                                 # Output tree plot
-                                                h3("Tree Plot(Best Tune)"),
+                                                h3("Regression Tree Plot(Best Tune)"),
                                                 plotOutput("tree_plot"),
                                                 
                                                 # Output variable importance for random forest
@@ -373,7 +485,66 @@ dashboardPage(skin = "yellow",
                                        ),
                               
                               # Define predictions tab
-                              tabPanel("Model Predictions", "PLACEHOLDER7")
+                              tabPanel("Model Predictions", 
+                                       fluidRow(
+                                         column(width = 3,
+                                                h3("Predictions"),
+                                                box(width = 12, 
+                                                    background = "yellow",
+                                                    # Linear Regression inputs
+                                                    radioButtons(inputId = "model",
+                                                                 label = "Model",
+                                                                 inline = TRUE,
+                                                                 choices = c(
+                                                                   "Linear Model",
+                                                                   "Regression Tree",
+                                                                   "Random Forest"
+                                                                   )
+                                                                 )
+                                                    ),
+                                                
+                                                # Columns for header and predict button
+                                                column(width = 6,
+                                                       h3("Inputs")),
+                                                column(width = 6,
+                                                       # Widget to run predictions
+                                                       actionButton(inputId = "pred_button",
+                                                                    label = "Predict",
+                                                                    class = "btn btn-danger btn-lg")
+                                                       ),
+                                                
+                                                # Conditional inputs based on linear model
+                                                conditionalPanel(condition = "input.model == 'Linear Model'",
+                                                                 box(width = 12,
+                                                                     background = "yellow",
+                                                                     uiOutput("lm_pred_inp")
+                                                                     )
+                                                                 ),
+                                                
+                                                # Conditional inputs based on tree model
+                                                conditionalPanel(condition = "input.model == 'Regression Tree'",
+                                                                 box(width = 12,
+                                                                     background = "yellow",
+                                                                     uiOutput("tree_pred_inp")
+                                                                 )
+                                                ),
+                                                
+                                                # Conditional inputs based on random forest
+                                                conditionalPanel(condition = "input.model == 'Random Forest'",
+                                                                 box(width = 12,
+                                                                     background = "yellow",
+                                                                     uiOutput("rf_pred_inp")
+                                                                     )
+                                                                 )
+                                                ),
+                                         
+                                         # Column for prediction statement
+                                         column(width = 9,
+                                                h3("Predicted Quality of Wine"),
+                                                h4(verbatimTextOutput("predictions"))
+                                                )
+                                         )
+                                       )
                               )
                             )
                           )

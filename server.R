@@ -33,8 +33,8 @@ wine$type <- factor(wine$type, labels = c("white", "red"))
 #Save a vector of numeric variable names
 numvars <- names(wine)[!names(wine) == "type"]
 
-#Save a vector of variable names other than the response
-predvars <- names(wine)[!names(wine) == "quality"]
+#Save a vector of variable names other than the response and categorical variable
+predvars <- names(wine)[!names(wine) %in% c("quality", "type")]
 
 # Define server for app
 shinyServer(function(input, output, session) {
@@ -256,11 +256,11 @@ shinyServer(function(input, output, session) {
     }
     
     # Update progress bar
-    progress$inc(0.2, detail = "Tree")
+    progress$inc(0.2, detail = "Regression Tree")
     
-    # Reset seed for training tree model
+    # Reset seed for training regression tree model
     set.seed(input$rng_inp)
-    # Fit tree model
+    # Fit regression tree model
     tree_fit <- train(quality ~ ., 
                       data = dataTrain[ , c("quality", var_tree)],
                       method = "rpart",
@@ -289,7 +289,7 @@ shinyServer(function(input, output, session) {
     
     # Combine training fit stats into a dataframe
     trn_stats <- bind_rows(mlr_fit$results, tree_trn_stats, rf_trn_stats) %>%
-      mutate(Model = c("linear", "tree", "random forest")) %>%
+      mutate(Model = c("linear", "regression tree", "random forest")) %>%
       select(Model, everything())
     
     # Render table of training fit stats
@@ -348,7 +348,126 @@ shinyServer(function(input, output, session) {
       paste("The 'best' model evaluated by lowest RMSE is the ", 
             best_model[, 1], " model with an RMSE of ", best_model[, 2], ".")
     })
+    
+    # Show UI and related variables only based on fitted models
+    # Generate input widgets from selected linear model variables
+    output$lm_pred_inp <- renderUI({
+      
+      
+      
+      # Apply numericInput function to create dynamic list of widgets
+      lapply(input$var_lm_inp, function(var){
+        numericInput(
+          inputId = var,
+          label = var,
+          step = 0.01,
+          # Set default values to random numbers in range from data set
+          value = round(
+            rnorm(n = 1,
+                  mean = mean(pull(wine[ , var])),
+                  sd = sd(pull(wine[ , var]))), 
+            digits = 3
+          )
+        )
+      })
+    })
+    
+    # Generate input widgets from selected regression tree variables
+    output$tree_pred_inp <- renderUI({
+      # Apply numericInput function to create dynamic list of widgets
+      lapply(input$var_tree_inp, function(var){
+        numericInput(
+          inputId = var,
+          label = var,
+          step = 0.01,
+          # Set default values to random numbers in range from data set
+          value = round(
+            rnorm(n = 1,
+                  mean = mean(pull(wine[ , var])),
+                  sd = sd(pull(wine[ , var]))), 
+            digits = 3
+          )
+        )
+      })
+    })
+    
+    # Generate input widgets from selected random forest variables
+    output$rf_pred_inp <- renderUI({
+      # Apply numericInput function to create dynamic list of widgets
+      lapply(input$var_rf_inp, function(var){
+        numericInput(
+          inputId = var,
+          label = var,
+          step = 0.01,
+          # Set default values to random numbers in range from data set
+          value = round(
+            rnorm(n = 1,
+                  mean = mean(pull(wine[ , var])),
+                  sd = sd(pull(wine[ , var]))), 
+            digits = 3
+          )
+        )
+      })
+    })
+    
+  # Make predictions when predict button is clicked
+  observeEvent(input$pred_button, {
+  
+    # Save a vector of inputIds to match the linear model's selected variables
+    if (input$model == "Linear Model"){
+      pred_vars <- unlist(input$var_lm_inp)
+      # Save linear model as prediction model
+      pred_model <- mlr_fit
+    
+    # Save a vector of inputIds to match the tree model's selected variables
+    } else if (input$model == "Regression Tree"){
+      pred_vars <- unlist(input$var_tree_inp)
+      # Save tree model as prediction model
+      pred_model <- tree_fit
+      
+    # Save a vector of inputIds to match random forest's selected variables
+    } else if (input$model == "Random Forest"){
+      pred_vars <- unlist(input$var_rf_inp)
+      # Save random forest model as prediction model
+      pred_model <- rf_fit
+      
+    } else {}
+  
+    # Render predictions
+    output$predictions <- renderText({
+      
+      # Initialize an empty vector
+      pred_vals <- c()
+      
+      # Build vector by looping through the inputIds and grabbing the user-values
+      for (i in pred_vars){
+        pred_vals <- c(pred_vals, input[[i]])
+      }
+      
+      # Create a one-row data frame with user-values
+      user_vals <- data.frame(t(pred_vals))
+      # Name columns based on the corresponding variables
+      colnames(user_vals) <- pred_vars
+      
+      # Predict using the selected model and user values
+      pred <- predict(pred_model, user_vals)
+      
+      # Output message stating the prediction
+      paste0("The predicted quality of wine based on the chosen values and using the ",
+            input$model, " is ", pred, ".")
+      })
+    })
   })
   
+  # Render image in 'about' tab
+  output$img <- renderImage({
+    
+    list(src = "www/vinho-verde.png",
+         width = "360px",
+         height = "360px")
+    
+  }, deleteFile = F)
   
+  # Render output for linear model formula
 })
+  
